@@ -73,20 +73,29 @@ pnpm --filter @agenda/database seed
 
 El aislamiento multi-tenant se implementa con **Row-Level Security**. El backend establece `app.current_clinica_id` y `app.current_user_id` dentro de cada transacción (`packages/database/src/tenant.ts`). Las políticas de ejemplo están en `packages/database/prisma/rls.sql`.
 
-## Producción (Docker)
+## Producción (Coolify)
 
-```bash
-cp .env.example .env
-# Ajusta DOMAIN, ACME_EMAIL, JWT_SECRET, POSTGRES_PASSWORD, etc.
+El stack de producción está en `docker-compose.prod.yml` y está pensado para desplegarse como
+recurso **Docker Compose** en [Coolify](https://coolify.io), que aporta el proxy (Traefik) y los
+certificados TLS. Por eso **no se publica ningún puerto**: Coolify enruta cada servicio por dominio.
 
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-```
+1. Crea un recurso **Docker Compose** apuntando a este repositorio.
+2. En **Base Directory** deja la raíz y en **Docker Compose Location** usa `docker-compose.prod.yml`.
+3. En **Environment Variables** define:
+   - `POSTGRES_PASSWORD`
+   - `JWT_SECRET` (mínimo 32 caracteres)
+   - `NEXT_PUBLIC_API_URL` → `https://api.tudominio.com`
+   - `WEB_URL` → `https://tudominio.com`
+   - `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` (opcional)
+4. Asigna el dominio de cada servicio público en **Domains**:
+   - `web` → `https://tudominio.com:3000`
+   - `api` → `https://api.tudominio.com:4000`
+5. **Deploy**.
 
-Traefik gestiona HTTPS automático (Let's Encrypt) y enruta:
+> El puerto interno (`:3000`, `:4000`) es solo la pista para que Coolify sepa a qué puerto del
+> contenedor enrutar; el usuario entra por HTTPS estándar.
 
-- `https://agenda.example.com` -> Web (Next.js)
-- `https://api.agenda.example.com` -> API (NestJS)
-- `https://traefik.agenda.example.com` -> Dashboard de Traefik
+Para desarrollo local se usa `docker-compose.yml` (postgres, pgbouncer, redis): `docker compose up -d`.
 
 ## Backups
 
