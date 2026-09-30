@@ -1,0 +1,287 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  CLINIC_ADMIN
+  BRANCH_ADMIN
+  RECEPTIONIST
+  DOCTOR
+  PATIENT
+  WHATSAPP_BOT
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  RESCHEDULED
+  CANCELLED
+  ATTENDED
+  NO_SHOW
+}
+
+enum NotificationChannel {
+  WHATSAPP
+  EMAIL
+  SMS
+  PUSH
+}
+
+model Clinica {
+  id         String   @id @default(uuid())
+  nombre     String
+  rut        String?
+  direccion  String?
+  telefono   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sucursales  Sucursal[]
+  usuarios    Usuario[]
+  medicos     Medico[]
+  pacientes   Paciente[]
+  citas       Cita[]
+  auditorias  Auditoria[]
+
+  @@map("clinicas")
+}
+
+model Sucursal {
+  id         String   @id @default(uuid())
+  clinicaId  String
+  nombre     String
+  direccion  String?
+  zonaHoraria String  @default("America/Santiago")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  clinica      Clinica          @relation(fields: [clinicaId], references: [id], onDelete: Cascade)
+  consultorios Consultorio[]
+  usuarios     Usuario[]
+  citas        Cita[]
+  disponibilidades Disponibilidad[]
+
+  @@index([clinicaId])
+  @@map("sucursales")
+}
+
+model Consultorio {
+  id         String   @id @default(uuid())
+  sucursalId String
+  nombre     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sucursal Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+  citas    Cita[]
+  disponibilidades Disponibilidad[]
+
+  @@index([sucursalId])
+  @@map("consultorios")
+}
+
+model Especialidad {
+  id        String @id @default(uuid())
+  nombre    String @unique
+  duracionMinutos Int @default(30)
+
+  medicos Medico[]
+
+  @@map("especialidades")
+}
+
+model Usuario {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  passwordHash String
+  nombre     String
+  rol        Role
+  clinicaId  String?
+  sucursalId String?
+  medicoId   String?  @unique
+  pacienteId String?  @unique
+  activo     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  clinica  Clinica?  @relation(fields: [clinicaId], references: [id])
+  sucursal Sucursal? @relation(fields: [sucursalId], references: [id])
+  medico   Medico?   @relation(fields: [medicoId], references: [id])
+  paciente Paciente? @relation(fields: [pacienteId], references: [id])
+  sesiones Sesion[]
+
+  @@index([clinicaId])
+  @@map("usuarios")
+}
+
+model Medico {
+  id        String @id @default(uuid())
+  clinicaId String
+  nombre    String
+  rut       String?
+  registroProfesional String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clinica       Clinica        @relation(fields: [clinicaId], references: [id], onDelete: Cascade)
+  usuario       Usuario?
+  especialidades Especialidad[]
+  disponibilidades Disponibilidad[]
+  bloqueos      BloqueoAgenda[]
+  citas         Cita[]
+
+  @@index([clinicaId])
+  @@map("medicos")
+}
+
+model Paciente {
+  id        String @id @default(uuid())
+  clinicaId String
+  nombre    String
+  apellido  String?
+  rut       String?
+  telefono  String?
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clinica   Clinica        @relation(fields: [clinicaId], references: [id], onDelete: Cascade)
+  usuario   Usuario?
+  ficha     FichaClinica?
+  citas     Cita[]
+
+  @@index([clinicaId])
+  @@map("pacientes")
+}
+
+model Disponibilidad {
+  id         String   @id @default(uuid())
+  medicoId   String
+  sucursalId String
+  consultorioId String?
+  diaSemana  Int
+  horaInicio String
+  horaFin    String
+  vigenteDesde DateTime
+  vigenteHasta DateTime?
+  createdAt  DateTime @default(now())
+
+  medico   Medico    @relation(fields: [medicoId], references: [id], onDelete: Cascade)
+  sucursal Sucursal  @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+  consultorio Consultorio? @relation(fields: [consultorioId], references: [id])
+
+  @@index([medicoId, sucursalId])
+  @@map("disponibilidades")
+}
+
+model BloqueoAgenda {
+  id         String   @id @default(uuid())
+  medicoId   String
+  fechaDesde DateTime
+  fechaHasta DateTime
+  motivo     String?
+  createdAt  DateTime @default(now())
+
+  medico Medico @relation(fields: [medicoId], references: [id], onDelete: Cascade)
+
+  @@index([medicoId, fechaDesde])
+  @@map("bloqueos_agenda")
+}
+
+model Cita {
+  id             String   @id @default(uuid())
+  clinicaId      String
+  sucursalId     String
+  consultorioId  String?
+  especialidadId String?
+  medicoId       String
+  pacienteId     String
+  fecha          DateTime
+  duracionMinutos Int     @default(30)
+  estado         AppointmentStatus @default(PENDING)
+  origen         String   @default("web")
+  notas          String?
+  creadoPor      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  clinica      Clinica      @relation(fields: [clinicaId], references: [id], onDelete: Cascade)
+  sucursal     Sucursal     @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+  consultorio  Consultorio? @relation(fields: [consultorioId], references: [id])
+  medico       Medico       @relation(fields: [medicoId], references: [id], onDelete: Cascade)
+  paciente     Paciente     @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  notificaciones Notificacion[]
+
+  @@index([clinicaId, fecha])
+  @@index([medicoId, fecha])
+  @@index([pacienteId, fecha])
+  @@map("citas")
+}
+
+model FichaClinica {
+  id          String   @id @default(uuid())
+  pacienteId  String   @unique
+  antecedentes String?
+  alergias    String?
+  medicamentos String?
+  notasEvolucion String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  paciente Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+
+  @@map("fichas_clinicas")
+}
+
+model Notificacion {
+  id        String   @id @default(uuid())
+  citaId    String
+  canal     NotificationChannel
+  estado    String   @default("pending")
+  enviadaEn DateTime?
+  error     String?
+  createdAt DateTime @default(now())
+
+  cita Cita @relation(fields: [citaId], references: [id], onDelete: Cascade)
+
+  @@index([citaId])
+  @@map("notificaciones")
+}
+
+model Auditoria {
+  id        String   @id @default(uuid())
+  clinicaId String
+  usuarioId String?
+  accion    String
+  entidad   String
+  entidadId String?
+  detalle   String?
+  createdAt DateTime @default(now())
+
+  clinica Clinica @relation(fields: [clinicaId], references: [id], onDelete: Cascade)
+
+  @@index([clinicaId, createdAt])
+  @@map("auditorias")
+}
+
+model Sesion {
+  id               String    @id @default(uuid())
+  usuarioId        String
+  refreshTokenHash String    @unique
+  userAgent        String?
+  ip               String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("sesiones")
+}

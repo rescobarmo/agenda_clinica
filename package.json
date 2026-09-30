@@ -1,0 +1,23 @@
+{
+  "name": "agenda",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sistema de agendamiento de horas médicas multi-clínica, multi-sucursal y multi-médico (web + WhatsApp)",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r run build",
+    "dev": "pnpm --parallel -r run dev",
+    "dev:api": "pnpm --filter @agenda/api dev",
+    "dev:web": "pnpm --filter @agenda/web dev",
+    "dev:whatsapp": "pnpm --filter @agenda/whatsapp dev",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
+    "db:generate": "pnpm --filter @agenda/database generate",
+    "db:migrate": "pnpm --filter @agenda/database migrate",
+    "db:studio": "pnpm --filter @agenda/database studio"
+  }
+}
