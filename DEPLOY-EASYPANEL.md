@@ -36,7 +36,7 @@ POSTGRES_PASSWORD=<una-password-fuerte>
 
 # Django
 DJANGO_SECRET_KEY=<genera-uno-largo>
-ALLOWED_HOSTS=midominio.com,www.midominio.com,api.midominio.com,agenda-clinica-agendas.fcs3wf.easypanel.host
+ALLOWED_HOSTS=localhost,127.0.0.1,midominio.com,www.midominio.com,api.midominio.com,agenda-clinica-agendas.fcs3wf.easypanel.host
 CSRF_TRUSTED_ORIGINS=https://midominio.com,https://api.midominio.com,https://agenda-clinica-agendas.fcs3wf.easypanel.host
 
 RLS_ENABLED=True
