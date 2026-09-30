@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Ficha clínica · Agenda Médica{% endblock %}
+{% block content %}
+<header class="mb-6 flex items-center justify-between">
+  <div>
+    <h1 class="text-2xl font-bold">Ficha clínica</h1>
+    <p class="text-sm text-gray-500">{{ paciente.nombre }} {{ paciente.apellido }}</p>
+  </div>
+  <a href="{% url 'agenda' %}" class="rounded-md border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50">← Volver</a>
+</header>
+
+<section class="mb-6 rounded-xl border border-gray-200 bg-white p-5">
+  <dl class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+    <dt class="text-gray-500">RUT</dt><dd class="font-medium">{{ paciente.rut|default:"—" }}</dd>
+    <dt class="text-gray-500">Teléfono</dt><dd class="font-medium">{{ paciente.telefono|default:"—" }}</dd>
+    <dt class="text-gray-500">Email</dt><dd class="font-medium">{{ paciente.email|default:"—" }}</dd>
+  </dl>
+</section>
+
+{% with f=paciente.ficha %}
+{% if f %}
+  <section class="rounded-xl border border-gray-200 bg-white p-5">
+    <h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">Antecedentes</h2>
+    <p class="text-sm text-gray-800">{{ f.antecedentes|default:"Sin información" }}</p>
+  </section>
+  <section class="mt-4 rounded-xl border border-gray-200 bg-white p-5">
+    <h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">Alergias</h2>
+    <p class="text-sm text-gray-800">{{ f.alergias|default:"Sin información" }}</p>
+  </section>
+  <section class="mt-4 rounded-xl border border-gray-200 bg-white p-5">
+    <h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">Medicamentos</h2>
+    <p class="text-sm text-gray-800">{{ f.medicamentos|default:"Sin información" }}</p>
+  </section>
+  <section class="mt-4 rounded-xl border border-gray-200 bg-white p-5">
+    <h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">Notas de evolución</h2>
+    <p class="text-sm text-gray-800">{{ f.notas_evolucion|default:"Sin información" }}</p>
+  </section>
+{% else %}
+  <p class="text-sm text-gray-500">Sin ficha clínica registrada para este paciente.</p>
+{% endif %}
+{% endwith %}
+{% endblock %}

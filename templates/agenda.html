@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Agenda · Agenda Médica{% endblock %}
+{% block content %}
+<header class="mb-6">
+  <h1 class="text-2xl font-bold">Agenda</h1>
+  <p class="text-sm text-gray-500">Citas registradas (vista de lista)</p>
+</header>
+
+<div class="space-y-2">
+  {% for cita in citas %}
+    <div class="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3">
+      <div>
+        <p class="text-sm font-medium">
+          {{ cita.fecha|date:"D d/m/Y H:i" }} · {{ cita.duracion_minutos }} min
+        </p>
+        <p class="text-xs text-gray-500">
+          {{ cita.paciente.nombre }} {{ cita.paciente.apellido }} → {{ cita.medico.nombre }}
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="rounded-full bg-gray-100 px-3 py-1 text-xs">{{ cita.get_estado_display }}</span>
+        <a href="{% url 'paciente-ficha' cita.paciente.id %}"
+           class="text-xs text-blue-600 hover:underline">Ficha</a>
+      </div>
+    </div>
+  {% empty %}
+    <p class="text-sm text-gray-500">No hay citas para mostrar.</p>
+  {% endfor %}
+</div>
+{% endblock %}

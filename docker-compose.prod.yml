@@ -1,93 +1,81 @@
 services:
-  postgres:
-    image: postgres:16-alpine
+  traefik:
+    image: traefik:v3.2
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-agenda}
-      POSTGRES_USER: ${POSTGRES_USER:-agenda_app}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls=true
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@example.com}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --api.dashboard=true
+      - --api.insecure=true
+    ports:
+      - "80:80"
+      - "443:443"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER:-agenda_app} -d ${POSTGRES_DB:-agenda}",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  pgbouncer:
-    image: edoburu/pgbouncer:latest
-    restart: unless-stopped
-    environment:
-      DB_HOST: postgres
-      DB_USER: ${POSTGRES_USER:-agenda_app}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:?}
-      DB_NAME: ${POSTGRES_DB:-agenda}
-      POOL_MODE: transaction
-      MAX_CLIENT_CONN: 200
-      DEFAULT_POOL_SIZE: 20
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
-    volumes:
-      - redis_data:/data
-
-  api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    restart: unless-stopped
-    environment:
-      NODE_ENV: production
-      PORT: 4000
-      DATABASE_URL: postgres://${POSTGRES_USER:-agenda_app}:${POSTGRES_PASSWORD:?}@pgbouncer:5432/${POSTGRES_DB:-agenda}?schema=public
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET:?}
-      WEB_URL: ${WEB_URL:?}
-    depends_on:
-      pgbouncer:
-        condition: service_started
-      redis:
-        condition: service_started
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_certs:/letsencrypt
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN}`)
+      - traefik.http.routers.dashboard.entrypoints=websecure
+      - traefik.http.routers.dashboard.tls.certresolver=letsencrypt
+      - traefik.http.routers.dashboard.service=api@internal
+      - traefik.http.routers.dashboard.middlewares=dashboard-auth
+      - traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_BASICAUTH}
 
   web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?}
-    restart: unless-stopped
-    environment:
-      NODE_ENV: production
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?}
-    depends_on:
-      api:
-        condition: service_started
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.web.rule=Host(`${DOMAIN}`) || Host(`www.${DOMAIN}`)
+      - traefik.http.routers.web.entrypoints=websecure
+      - traefik.http.routers.web.tls.certresolver=letsencrypt
+      - traefik.http.services.web.loadbalancer.server.port=8000
+      - traefik.http.routers.apihost.rule=Host(`api.${DOMAIN}`)
+      - traefik.http.routers.apihost.entrypoints=websecure
+      - traefik.http.routers.apihost.tls.certresolver=letsencrypt
+      - traefik.http.routers.apihost.service=web
+      - traefik.http.routers.whhost.rule=Host(`whatsapp.${DOMAIN}`)
+      - traefik.http.routers.whhost.entrypoints=websecure
+      - traefik.http.routers.whhost.tls.certresolver=letsencrypt
+      - traefik.http.routers.whhost.service=web
 
-  whatsapp:
-    build:
-      context: .
-      dockerfile: apps/whatsapp/Dockerfile
+  flower:
+    image: mher/flower:2.0
     restart: unless-stopped
+    command: ["celery", "--broker=${CELERY_BROKER_URL}", "flower", "--port=5555", "--url_prefix=flower"]
     environment:
-      NODE_ENV: production
-      REDIS_URL: redis://redis:6379
-      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}
-      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
+      FLOWER_UNAUTHENTICATED_API: "true"
     depends_on:
-      redis:
-        condition: service_started
-      pgbouncer:
-        condition: service_started
+      - redis
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.flower.rule=Host(`flower.${DOMAIN}`)
+      - traefik.http.routers.flower.entrypoints=websecure
+      - traefik.http.routers.flower.tls.certresolver=letsencrypt
+      - traefik.http.routers.flower.middlewares=flower-auth
+      - traefik.http.services.flower.loadbalancer.server.port=5555
+      - traefik.http.middlewares.flower-auth.basicauth.users=${FLOWER_BASICAUTH}
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    restart: unless-stopped
+    volumes:
+      - uptime_kuma_data:/app/data
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.status.rule=Host(`status.${DOMAIN}`)
+      - traefik.http.routers.status.entrypoints=websecure
+      - traefik.http.routers.status.tls.certresolver=letsencrypt
+      - traefik.http.services.status.loadbalancer.server.port=3001
 
 volumes:
-  postgres_data:
-  redis_data:
+  traefik_certs:
+  uptime_kuma_data:

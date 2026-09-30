@@ -1,0 +1,32 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Agenda Médica{% endblock %}</title>
+  {# Tailwind (para producción compilar con el CLI y servir el CSS final) #}
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
+</head>
+<body class="min-h-screen bg-gray-50 text-gray-900 antialiased">
+  <nav class="border-b border-gray-200 bg-white">
+    <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
+      <a href="{% url 'dashboard' %}" class="font-semibold">Agenda Médica</a>
+      <div class="flex items-center gap-4 text-sm">
+        {% if user.is_authenticated %}
+          <a href="{% url 'agenda' %}" class="hover:text-blue-600">Agenda</a>
+          <span class="text-gray-400">{{ user.get_full_name|default:user.username }} · {{ user.rol }}</span>
+          <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+            <button class="rounded-md border border-gray-300 px-3 py-1 hover:bg-gray-50">Salir</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+  <main class="mx-auto max-w-5xl px-6 py-8">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

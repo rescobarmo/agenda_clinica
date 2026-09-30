@@ -1,35 +1,32 @@
-# Dependencies
-node_modules/
-.pnpm-store/
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Build output
-dist/
-build/
-.next/
-out/
-*.tsbuildinfo
+# Django
+db.sqlite3
+staticfiles/
+media/
+*.log
 
-# Environment
+# Entorno / secretos
 .env
 .env.*
 !.env.example
 secrets/
 *.local
 
-# Prisma
-packages/database/prisma/migrations/dev.db*
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-pnpm-debug.log*
-
-# Docker
+# Docker / datos
 data/
 postgres_data/
 redis_data/
 traefik_certs/
+letsencrypt/
 
 # OS / editor
 .DS_Store

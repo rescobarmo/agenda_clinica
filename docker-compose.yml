@@ -1,21 +1,15 @@
 services:
-  postgres:
+  db:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-agenda}
       POSTGRES_USER: ${POSTGRES_USER:-agenda_app}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
-    ports:
-      - "127.0.0.1:5432:5432"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER:-agenda_app} -d ${POSTGRES_DB:-agenda}",
-        ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agenda_app} -d ${POSTGRES_DB:-agenda}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,27 +18,69 @@ services:
     image: edoburu/pgbouncer:latest
     restart: unless-stopped
     environment:
-      DB_HOST: postgres
+      DB_HOST: db
       DB_USER: ${POSTGRES_USER:-agenda_app}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?}
       DB_NAME: ${POSTGRES_DB:-agenda}
       POOL_MODE: transaction
       MAX_CLIENT_CONN: 200
       DEFAULT_POOL_SIZE: 20
-    ports:
-      - "127.0.0.1:6432:5432"
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
-    ports:
-      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DJANGO_INIT: "1"
+    depends_on:
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_started
+    expose:
+      - "8000"
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["celery", "-A", "config", "worker", "-l", "info", "-Q", "celery"]
+    env_file: .env
+    depends_on:
+      - pgbouncer
+      - redis
+
+  whatsapp-worker:
+    build: .
+    restart: unless-stopped
+    command: ["celery", "-A", "config", "worker", "-l", "info", "-Q", "whatsapp"]
+    env_file: .env
+    depends_on:
+      - pgbouncer
+      - redis
+
+  beat:
+    build: .
+    restart: unless-stopped
+    command: ["celery", "-A", "config", "beat", "-l", "info", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"]
+    env_file: .env
+    depends_on:
+      - pgbouncer
+      - redis
 
 volumes:
   postgres_data:
