@@ -31,8 +31,9 @@ Agenda/
 │   └── web/                # Vistas y plantillas (HTMX)
 ├── templates/              # base, login, dashboard, agenda, ficha
 ├── scripts/                # backup.sh, restore.sh
-├── docker-compose.yml      # Stack base (db, pgbouncer, redis, web, workers)
-├── docker-compose.prod.yml  # Traefik, Flower, Uptime Kuma y labels de proxy
+├── docker-compose.yml      # EasyPanel (web, worker, whatsapp-worker, beat)
+├── docker-compose.vps.yml       # VPS base (db, pgbouncer, redis, web, workers)
+├── docker-compose.vps.prod.yml  # VPS: Traefik, Flower, Uptime Kuma y labels
 ├── deploy.sh               # Automatiza fases 3–6 del despliegue
 └── DEPLOY.md               # Guía de despliegue paso a paso
 ```
@@ -57,7 +58,9 @@ python manage.py runserver
 ## Producción
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# EasyPanel: usa docker-compose.yml (por defecto)
+# VPS propio:
+docker compose -f docker-compose.vps.yml -f docker-compose.vps.prod.yml up -d --build
 ```
 
 Consulta [`DEPLOY.md`](./DEPLOY.md) para el detalle de cada fase (hardening, SSL, backups, monitoreo).

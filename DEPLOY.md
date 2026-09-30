@@ -198,7 +198,7 @@ Pega cada salida en `.env` (`TRAEFIK_BASICAUTH=` y `FLOWER_BASICAUTH=`) y ajusta
 
 ```bash
 # Levantar en producción
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.vps.yml -f docker-compose.vps.prod.yml up -d
 ```
 
 ```bash

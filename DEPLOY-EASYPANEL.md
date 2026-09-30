@@ -1,13 +1,13 @@
 # Despliegue en EasyPanel
 
 EasyPanel aporta su propio proxy (Traefik) y gestiona dominios, HTTPS, variables y backups.
-Por eso este despliegue **no** usa nuestro `docker-compose.prod.yml` (que trae Traefik/Flower/Kuma
-propios y publica puertos). Usamos:
+Por eso este despliegue **no** usa el stack de VPS (`docker-compose.vps.yml` +
+`docker-compose.vps.prod.yml`, que traen Traefik/Flower/Kuma propios y publican puertos). Usamos:
 
 - **Postgres** y **Redis** nativos de EasyPanel.
-- Un **Compose Service** con `docker-compose.easypanel.yml` (solo `web`, `worker`, `whatsapp-worker`, `beat`).
+- Un **Compose Service** con `docker-compose.yml` (por defecto: solo `web`, `worker`, `whatsapp-worker`, `beat`).
 
-> EasyPanel avisa si un compose usa `ports` o `container_name`. Nuestro `docker-compose.easypanel.yml`
+> EasyPanel avisa si un compose usa `ports` o `container_name`. Nuestro `docker-compose.yml`
 > no los usa: el enrutado se hace por **Domains** en el panel.
 
 ---
@@ -41,7 +41,7 @@ redis://default:<password>@agenda_redis:6379
   - (Si es privado: usa la SSH key que muestra EasyPanel como *deploy key* de solo lectura.)
   - Branch: `main`
   - **Build Path:** `/`
-  - **Docker Compose File:** `docker-compose.easypanel.yml`
+  - **Docker Compose File:** `docker-compose.yml` (déjalo por defecto)
 - **Environment:** activa **Create .env file** y pega el contenido de `.env.example`, ajustando:
 
 ```dotenv
