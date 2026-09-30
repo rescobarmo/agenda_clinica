@@ -14,6 +14,10 @@ if [ "${DJANGO_INIT:-0}" = "1" ]; then
     echo "==> Aplicando políticas RLS"
     python manage.py apply_rls_policies || echo "RLS: se omite (revisar permisos)"
   fi
+  if [ -n "${DJANGO_SUPERUSER_PASSWORD:-}" ]; then
+    echo "==> Asegurando superusuario"
+    python manage.py ensure_superuser
+  fi
 fi
 
 exec "$@"
